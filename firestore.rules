@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default-deny all by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidUserSpace(data) {
+      return data.keys().hasAll(['ownerId', 'groups']) &&
+             data.keys().hasOnly(['ownerId', 'groups', 'settings', 'updatedAt', 'createdAt']) &&
+             data.ownerId is string &&
+             data.ownerId == request.auth.uid &&
+             data.groups is list &&
+             data.groups.size() <= 50;
+    }
+
+    match /user_spaces/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserSpace(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserSpace(incoming()) && incoming().ownerId == existing().ownerId;
+      allow delete: if isOwner(userId) && isValidId(userId);
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "UserSpace": {
+      "title": "UserSpace",
+      "description": "User personalized link groups, links, and settings that are synchronized real-time to Firestore.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "User ID of the workspace owner."
+        },
+        "groups": {
+          "type": "array",
+          "description": "Array of link groups containing link items."
+        },
+        "settings": {
+          "type": "object",
+          "description": "Application display settings like base theme and new tab preference."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp string."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp string."
+        }
+      },
+      "required": ["ownerId", "groups"]
+    }
+  },
+  "firestore": {
+    "/user_spaces/{userId}": {
+      "schema": "#/entities/UserSpace",
+      "description": "User link collections keyed by user ID to prevent data loss across code updates."
+    }
+  }
+}
