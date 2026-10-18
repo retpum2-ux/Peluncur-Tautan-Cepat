@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User } from 'firebase/auth';
 import { GroupItem, AppSettings, LinkItem } from './types';
 import {
   INITIAL_GROUPS,
@@ -19,21 +18,18 @@ import { GroupModal } from './components/GroupModal';
 import { SettingsModal } from './components/SettingsModal';
 import { normalizeUrl } from './utils/urlHelper';
 import {
-  onAuthChange,
-  loginWithGoogle,
-  logoutUser,
-  saveUserSpaceToFirestore,
-  subscribeToUserSpace,
+  saveMainSpace,
+  subscribeToMainSpace,
 } from './firebase/syncService';
 
 const STORAGE_KEY_GROUPS = 'peluncur_tautan_groups_v1';
 const STORAGE_KEY_SETTINGS = 'peluncur_tautan_settings_v1';
 
 export default function App() {
-  // Authentication & Cloud Sync state
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Cloud Sync state
   const [isSyncing, setIsSyncing] = useState(false);
   const isRemoteUpdate = useRef(false);
+  const isFirstLoad = useRef(true);
 
   // Initialize state with localStorage or default values
   const [groups, setGroups] = useState<GroupItem[]>(() => {
@@ -84,33 +80,16 @@ export default function App() {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage((prev) => (prev === msg ? null : prev));
-    }, 3500);
+    }, 3000);
   };
 
-  // 1. Listen to Firebase Auth state
+  // 1. Direct Real-time Firestore synchronization on mount
   useEffect(() => {
-    const unsubscribe = onAuthChange((user) => {
-      setCurrentUser(user);
-      if (user) {
-        showToast(`Terhubung dengan ${user.email}. Sinkronisasi cloud aktif.`);
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // 2. Real-time Firestore synchronization subscription when user is authenticated
-  useEffect(() => {
-    if (!currentUser) return;
-
-    let hasReceivedInitialData = false;
     setIsSyncing(true);
 
-    const unsubscribe = subscribeToUserSpace(
-      currentUser.uid,
+    const unsubscribe = subscribeToMainSpace(
       (remoteData) => {
-        hasReceivedInitialData = true;
         setIsSyncing(false);
-
         if (remoteData && Array.isArray(remoteData.groups) && remoteData.groups.length > 0) {
           isRemoteUpdate.current = true;
           setGroups(remoteData.groups);
@@ -120,31 +99,21 @@ export default function App() {
           setTimeout(() => {
             isRemoteUpdate.current = false;
           }, 200);
-        } else {
-          // Cloud document is empty or new account: upload current local groups so links are never lost
-          saveUserSpaceToFirestore(currentUser.uid, groups, settings).catch(console.error);
+        } else if (isFirstLoad.current) {
+          // Upload current local groups to Firestore so links are preserved
+          saveMainSpace(groups, settings).catch(console.error);
         }
+        isFirstLoad.current = false;
       },
       () => {
         setIsSyncing(false);
       }
     );
 
-    // Initial backup trigger if no cloud document exists yet
-    const timeout = setTimeout(() => {
-      if (!hasReceivedInitialData && currentUser) {
-        saveUserSpaceToFirestore(currentUser.uid, groups, settings).catch(console.error);
-        setIsSyncing(false);
-      }
-    }, 2500);
+    return () => unsubscribe();
+  }, []);
 
-    return () => {
-      unsubscribe();
-      clearTimeout(timeout);
-    };
-  }, [currentUser]);
-
-  // 3. Persist local changes to localStorage and push to Firestore if authenticated
+  // 2. Persist local changes to localStorage and push to Firestore real-time
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_GROUPS, JSON.stringify(groups));
@@ -152,16 +121,16 @@ export default function App() {
       // ignore
     }
 
-    if (currentUser && !isRemoteUpdate.current) {
+    if (!isRemoteUpdate.current && !isFirstLoad.current) {
       setIsSyncing(true);
       const timer = setTimeout(() => {
-        saveUserSpaceToFirestore(currentUser.uid, groups, settings)
+        saveMainSpace(groups, settings)
           .then(() => setIsSyncing(false))
           .catch(() => setIsSyncing(false));
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [groups, currentUser]);
+  }, [groups]);
 
   useEffect(() => {
     try {
@@ -170,37 +139,16 @@ export default function App() {
       // ignore
     }
 
-    if (currentUser && !isRemoteUpdate.current) {
+    if (!isRemoteUpdate.current && !isFirstLoad.current) {
       setIsSyncing(true);
       const timer = setTimeout(() => {
-        saveUserSpaceToFirestore(currentUser.uid, groups, settings)
+        saveMainSpace(groups, settings)
           .then(() => setIsSyncing(false))
           .catch(() => setIsSyncing(false));
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [settings, currentUser]);
-
-  // Auth actions
-  const handleLogin = async () => {
-    try {
-      await loginWithGoogle();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!msg.includes('popup-closed-by-user')) {
-        showToast('Gagal masuk dengan Google. Silakan coba lagi.');
-      }
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logoutUser();
-      showToast('Berhasil keluar dari akun Google.');
-    } catch {
-      showToast('Gagal keluar akun.');
-    }
-  };
+  }, [settings]);
 
   // Handle direct visit
   const handleOpenLink = (rawUrl: string) => {
@@ -234,7 +182,6 @@ export default function App() {
     linkId?: string
   ) => {
     setGroups((prevGroups) => {
-      // If editing existing link
       if (linkId) {
         return prevGroups.map((g) => {
           if (g.id === linkData.groupId) {
@@ -272,7 +219,6 @@ export default function App() {
         });
       }
 
-      // If creating new link
       const newLink: LinkItem = {
         id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         title: linkData.title,
@@ -482,10 +428,7 @@ export default function App() {
           onAddNewLink={() => handleOpenAddLink()}
           onAddNewGroup={handleOpenAddGroup}
           onOpenSettings={() => setIsSettingsModalOpen(true)}
-          currentUser={currentUser}
           isSyncing={isSyncing}
-          onLogin={handleLogin}
-          onLogout={handleLogout}
         />
 
         {/* 2. GROUPS CONTAINER (PRIBADI, PEKERJAAN, dll.) */}
@@ -564,10 +507,7 @@ export default function App() {
         onExportData={handleExportData}
         onImportData={handleImportData}
         onResetDefault={handleResetDefault}
-        currentUser={currentUser}
         isSyncing={isSyncing}
-        onLogin={handleLogin}
-        onLogout={handleLogout}
       />
     </div>
   );

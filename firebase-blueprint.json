@@ -1,14 +1,10 @@
 {
   "entities": {
-    "UserSpace": {
-      "title": "UserSpace",
-      "description": "User personalized link groups, links, and settings that are synchronized real-time to Firestore.",
+    "AppSpace": {
+      "title": "AppSpace",
+      "description": "Direct synchronized workspace for link groups, links, and settings stored in Firestore without requiring user login.",
       "type": "object",
       "properties": {
-        "ownerId": {
-          "type": "string",
-          "description": "User ID of the workspace owner."
-        },
         "groups": {
           "type": "array",
           "description": "Array of link groups containing link items."
@@ -26,13 +22,13 @@
           "description": "Creation timestamp string."
         }
       },
-      "required": ["ownerId", "groups"]
+      "required": ["groups"]
     }
   },
   "firestore": {
-    "/user_spaces/{userId}": {
-      "schema": "#/entities/UserSpace",
-      "description": "User link collections keyed by user ID to prevent data loss across code updates."
+    "/app_spaces/{spaceId}": {
+      "schema": "#/entities/AppSpace",
+      "description": "Synchronized links workspace document keyed by space ID (e.g. default) to prevent data loss across code updates without requiring login."
     }
   }
 }

@@ -4,89 +4,48 @@ import {
   getDoc,
   onSnapshot,
 } from 'firebase/firestore';
-import {
-  signInWithPopup,
-  signOut as firebaseSignOut,
-  User,
-  onAuthStateChanged,
-} from 'firebase/auth';
-import { auth, db, googleProvider } from './config';
+import { db } from './config';
 import { handleFirestoreError, OperationType } from './errorHandler';
 import { GroupItem, AppSettings } from '../types';
 
-export interface UserSpaceData {
-  ownerId: string;
+export interface AppSpaceData {
   groups: GroupItem[];
-  settings: AppSettings;
-  updatedAt: string;
+  settings?: AppSettings;
+  updatedAt?: string;
   createdAt?: string;
 }
 
-/**
- * Sign in with Google using popup
- */
-export async function loginWithGoogle(): Promise<User | null> {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
-  } catch (err) {
-    console.error('Google Sign-in Error:', err);
-    throw err;
-  }
-}
+const DEFAULT_SPACE_ID = 'default';
 
 /**
- * Sign out current user
+ * Save links & settings directly to Firestore real-time database without requiring login
  */
-export async function logoutUser(): Promise<void> {
-  try {
-    await firebaseSignOut(auth);
-  } catch (err) {
-    console.error('Logout Error:', err);
-    throw err;
-  }
-}
-
-/**
- * Listen to auth state changes
- */
-export function onAuthChange(callback: (user: User | null) => void) {
-  return onAuthStateChanged(auth, callback);
-}
-
-/**
- * Save user links & settings to Firestore
- */
-export async function saveUserSpaceToFirestore(
-  userId: string,
+export async function saveMainSpace(
   groups: GroupItem[],
   settings: AppSettings
 ): Promise<void> {
-  const path = `user_spaces/${userId}`;
+  const path = `app_spaces/${DEFAULT_SPACE_ID}`;
   try {
-    const payload: UserSpaceData = {
-      ownerId: userId,
+    const payload: AppSpaceData = {
       groups,
       settings,
       updatedAt: new Date().toISOString(),
     };
-    await setDoc(doc(db, 'user_spaces', userId), payload, { merge: true });
+    await setDoc(doc(db, 'app_spaces', DEFAULT_SPACE_ID), payload, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
 /**
- * Get user links & settings once from Firestore
+ * Get links & settings once from Firestore
  */
-export async function getUserSpaceFromFirestore(
-  userId: string
-): Promise<UserSpaceData | null> {
-  const path = `user_spaces/${userId}`;
+export async function getMainSpace(): Promise<AppSpaceData | null> {
+  const path = `app_spaces/${DEFAULT_SPACE_ID}`;
   try {
-    const snapshot = await getDoc(doc(db, 'user_spaces', userId));
+    const snapshot = await getDoc(doc(db, 'app_spaces', DEFAULT_SPACE_ID));
     if (snapshot.exists()) {
-      return snapshot.data() as UserSpaceData;
+      return snapshot.data() as AppSpaceData;
     }
     return null;
   } catch (error) {
@@ -98,17 +57,16 @@ export async function getUserSpaceFromFirestore(
 /**
  * Subscribe to real-time changes from Firestore
  */
-export function subscribeToUserSpace(
-  userId: string,
-  onData: (data: UserSpaceData) => void,
+export function subscribeToMainSpace(
+  onData: (data: AppSpaceData) => void,
   onError?: (err: unknown) => void
 ) {
-  const path = `user_spaces/${userId}`;
+  const path = `app_spaces/${DEFAULT_SPACE_ID}`;
   return onSnapshot(
-    doc(db, 'user_spaces', userId),
+    doc(db, 'app_spaces', DEFAULT_SPACE_ID),
     (snapshot) => {
       if (snapshot.exists()) {
-        onData(snapshot.data() as UserSpaceData);
+        onData(snapshot.data() as AppSpaceData);
       }
     },
     (error) => {

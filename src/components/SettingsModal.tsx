@@ -13,13 +13,9 @@ import {
   ExternalLink,
   Check,
   Plus,
-  Cloud,
   CloudCheck,
-  LogIn,
-  LogOut,
   Database,
 } from 'lucide-react';
-import { User } from 'firebase/auth';
 import { AppSettings, BaseThemeId, GroupItem } from '../types';
 import { BASE_THEMES, COLOR_THEMES } from '../data/defaultData';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -37,10 +33,7 @@ interface SettingsModalProps {
   onExportData: () => void;
   onImportData: (file: File) => void;
   onResetDefault: () => void;
-  currentUser: User | null;
   isSyncing: boolean;
-  onLogin: () => void;
-  onLogout: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -56,10 +49,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onExportData,
   onImportData,
   onResetDefault,
-  currentUser,
   isSyncing,
-  onLogin,
-  onLogout,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -110,60 +100,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
               <span className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
                 <CloudCheck className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Terhubung</span>
+                <span>{isSyncing ? 'Menyinkronkan...' : 'Terhubung Langsung'}</span>
               </span>
             </div>
-            <p className="text-xs text-emerald-900/80 mb-3">
-              Data tersinkron otomatis ke cloud Firestore, sehingga saat ada pembaruan kode, fitur baru, atau membuka di perangkat lain, tautan yang tersimpan <strong>tidak akan terhapus</strong>.
+            <p className="text-xs text-emerald-900/80">
+              Semua kelompok dan tautan disimpan dan disinkronkan secara <strong>real-time</strong> ke cloud database Firestore. Tautan Anda tidak akan terhapus saat pembaruan kode, build baru, atau saat cache browser dibersihkan.
             </p>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-emerald-200">
-              {currentUser ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                    {currentUser.email?.charAt(0).toUpperCase() || 'U'}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-slate-900 truncate">
-                      {currentUser.displayName || currentUser.email}
-                    </div>
-                    <div className="text-[11px] text-emerald-700 font-mono truncate">
-                      {currentUser.email} · {isSyncing ? 'Sedang sync...' : 'Real-time aktif'}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Cloud className="w-5 h-5 text-slate-400" />
-                  <div className="text-xs text-slate-700">
-                    <span className="font-bold">Mode Lokal:</span> Masuk dengan Google agar data link tersimpan permanen di cloud akun Anda.
-                  </div>
-                </div>
-              )}
-
-              <div className="shrink-0 flex items-center gap-2">
-                {currentUser ? (
-                  <button
-                    type="button"
-                    onClick={onLogout}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-red-50 hover:text-red-700 transition-colors"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Keluar Akun</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={onLogin}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 shadow-xs transition-all"
-                  >
-                    <LogIn className="w-3.5 h-3.5" />
-                    <span>Masuk dengan Google</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
             <div className="mt-2 text-[10px] text-slate-500 font-mono">
               Database ID: {firebaseConfig.firestoreDatabaseId}
             </div>

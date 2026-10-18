@@ -1,6 +1,5 @@
 import React from 'react';
-import { Plus, Search, Settings, FolderPlus, Cloud, CloudCheck, LogIn, LogOut } from 'lucide-react';
-import { User } from 'firebase/auth';
+import { Plus, Search, Settings, FolderPlus, CloudCheck, Loader2 } from 'lucide-react';
 import { BaseThemeConfig } from '../data/defaultData';
 
 interface HeaderMenuProps {
@@ -11,10 +10,7 @@ interface HeaderMenuProps {
   onAddNewLink: () => void;
   onAddNewGroup: () => void;
   onOpenSettings: () => void;
-  currentUser: User | null;
   isSyncing: boolean;
-  onLogin: () => void;
-  onLogout: () => void;
 }
 
 export const HeaderMenu: React.FC<HeaderMenuProps> = ({
@@ -25,10 +21,7 @@ export const HeaderMenu: React.FC<HeaderMenuProps> = ({
   onAddNewLink,
   onAddNewGroup,
   onOpenSettings,
-  currentUser,
   isSyncing,
-  onLogin,
-  onLogout,
 }) => {
   return (
     <header className="space-y-2.5 sm:space-y-3">
@@ -81,47 +74,23 @@ export const HeaderMenu: React.FC<HeaderMenuProps> = ({
         </div>
       </div>
 
-      {/* Cloud Sync Status & Auth Banner */}
-      <div className="flex items-center justify-between px-1 text-xs">
-        {currentUser ? (
-          <div className="flex items-center justify-between w-full bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl px-3 py-1.5">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <CloudCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span className="font-semibold truncate">
-                {isSyncing ? 'Menyinkronkan ke Firebase...' : 'Tersinkron Real-time ke Cloud'}
-              </span>
-              <span className="hidden sm:inline text-emerald-600 font-normal">
-                ({currentUser.email})
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={onLogout}
-              className="text-[11px] font-bold text-slate-500 hover:text-red-600 ml-2 shrink-0 flex items-center gap-1"
-              title="Keluar dari akun Google"
-            >
-              <LogOut className="w-3 h-3" />
-              <span>Keluar</span>
-            </button>
+      {/* Cloud Sync Status Badge (Tersinkron Otomatis Tanpa Perlu Login) */}
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white/80 border border-slate-200/80 rounded-lg px-2.5 py-1 w-full justify-between">
+          <div className="flex items-center gap-1.5">
+            {isSyncing ? (
+              <Loader2 className="w-3.5 h-3.5 text-sky-600 animate-spin" />
+            ) : (
+              <CloudCheck className="w-3.5 h-3.5 text-emerald-600" />
+            )}
+            <span className="font-medium text-slate-700">
+              {isSyncing ? 'Menyinkronkan ke database...' : 'Database Cloud Real-Time Aktif'}
+            </span>
           </div>
-        ) : (
-          <div className="flex items-center justify-between w-full bg-slate-100/90 border border-slate-300 text-slate-700 rounded-xl px-3 py-1.5">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <Cloud className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-              <span className="text-[11px] sm:text-xs truncate">
-                Simpan permanen ke Firebase agar tautan tidak hilang saat pembaruan kode:
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={onLogin}
-              className="text-[11px] font-bold text-sky-700 hover:text-sky-900 bg-white border border-sky-300 px-2 py-0.5 rounded-md ml-2 shrink-0 flex items-center gap-1 shadow-2xs"
-            >
-              <LogIn className="w-3 h-3" />
-              <span>Masuk Google</span>
-            </button>
-          </div>
-        )}
+          <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
+            Tersimpan otomatis permanen
+          </span>
+        </div>
       </div>
 
       {/* Quick Search & Filter bar for instant finding */}
