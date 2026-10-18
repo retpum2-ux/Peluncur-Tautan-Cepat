@@ -1,0 +1,6 @@
+{
+  "name": "Peluncur Tautan Cepat",
+  "description": "Aplikasi peluncur tautan web cepat untuk kebutuhan pribadi dan pekerjaan dengan pengelompokan, pengaturan warna cerah, dan posisi yang dapat diatur.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
