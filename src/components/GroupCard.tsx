@@ -303,10 +303,10 @@ export const GroupCard: React.FC<GroupCardProps> = ({
                     onClick={(e) => {
                       e.stopPropagation();
                     }}
-                    className={`inline-flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-6 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl font-bold sm:font-black text-[11px] sm:text-sm tracking-normal sm:tracking-wider uppercase ${theme.buttonBg} ${theme.buttonHover} ${theme.buttonText} shadow-xs sm:shadow-md transition-all active:scale-95 focus:outline-hidden ${theme.accentRing}`}
+                    className={`inline-flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-6 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl font-bold sm:font-black text-[11px] sm:text-sm tracking-normal sm:tracking-wider uppercase ${theme.buttonBg} ${theme.buttonHover} ${theme.buttonText} shadow-2xs hover:shadow-xs transition-all active:scale-95 focus:outline-hidden ${theme.accentRing}`}
                   >
                     <span>KUNJUNGI</span>
-                    <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-80" />
                   </a>
                 </div>
               </div>
