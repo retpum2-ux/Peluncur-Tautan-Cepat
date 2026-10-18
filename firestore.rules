@@ -7,6 +7,10 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /test/{docId} {
+      allow read: if true;
+    }
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -23,11 +27,8 @@ service cloud.firestore {
     }
 
     match /app_spaces/{spaceId} {
-      allow get: if isValidId(spaceId);
-      allow list: if false;
-      allow create: if isValidId(spaceId) && isValidAppSpace(incoming());
-      allow update: if isValidId(spaceId) && isValidAppSpace(incoming());
-      allow delete: if false;
+      allow read: if isValidId(spaceId);
+      allow write: if isValidId(spaceId) && isValidAppSpace(incoming());
     }
   }
 }

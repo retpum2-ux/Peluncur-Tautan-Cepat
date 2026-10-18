@@ -87,9 +87,19 @@ export default function App() {
   useEffect(() => {
     setIsSyncing(true);
 
+    // Timeout safeguard: never let spinner hang indefinitely
+    const timeout = setTimeout(() => {
+      setIsSyncing(false);
+      isFirstLoad.current = false;
+    }, 2500);
+
     const unsubscribe = subscribeToMainSpace(
+      // onData: cloud document exists
       (remoteData) => {
+        clearTimeout(timeout);
         setIsSyncing(false);
+        isFirstLoad.current = false;
+
         if (remoteData && Array.isArray(remoteData.groups) && remoteData.groups.length > 0) {
           isRemoteUpdate.current = true;
           setGroups(remoteData.groups);
@@ -98,19 +108,37 @@ export default function App() {
           }
           setTimeout(() => {
             isRemoteUpdate.current = false;
-          }, 200);
-        } else if (isFirstLoad.current) {
-          // Upload current local groups to Firestore so links are preserved
-          saveMainSpace(groups, settings).catch(console.error);
+          }, 300);
         }
-        isFirstLoad.current = false;
       },
+      // onEmpty: cloud document does not exist yet!
       () => {
+        clearTimeout(timeout);
+        // Upload initial local data to Firestore so it is stored permanently
+        saveMainSpace(groups, settings)
+          .then(() => {
+            setIsSyncing(false);
+            isFirstLoad.current = false;
+          })
+          .catch((err) => {
+            console.warn('Initial cloud space upload warning:', err);
+            setIsSyncing(false);
+            isFirstLoad.current = false;
+          });
+      },
+      // onError: connection error or rule issue
+      (err) => {
+        clearTimeout(timeout);
         setIsSyncing(false);
+        isFirstLoad.current = false;
+        console.warn('Sync connection error:', err);
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      unsubscribe();
+    };
   }, []);
 
   // 2. Persist local changes to localStorage and push to Firestore real-time

@@ -18,7 +18,7 @@ export interface AppSpaceData {
 const DEFAULT_SPACE_ID = 'default';
 
 /**
- * Save links & settings directly to Firestore real-time database without requiring login
+ * Save links & settings directly to Firestore real-time database
  */
 export async function saveMainSpace(
   groups: GroupItem[],
@@ -33,7 +33,12 @@ export async function saveMainSpace(
     };
     await setDoc(doc(db, 'app_spaces', DEFAULT_SPACE_ID), payload, { merge: true });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    try {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    } catch {
+      // logged
+    }
+    throw error;
   }
 }
 
@@ -49,7 +54,11 @@ export async function getMainSpace(): Promise<AppSpaceData | null> {
     }
     return null;
   } catch (error) {
-    handleFirestoreError(error, OperationType.GET, path);
+    try {
+      handleFirestoreError(error, OperationType.GET, path);
+    } catch {
+      // logged
+    }
     return null;
   }
 }
@@ -59,19 +68,31 @@ export async function getMainSpace(): Promise<AppSpaceData | null> {
  */
 export function subscribeToMainSpace(
   onData: (data: AppSpaceData) => void,
+  onEmpty: () => void,
   onError?: (err: unknown) => void
 ) {
   const path = `app_spaces/${DEFAULT_SPACE_ID}`;
+  const docRef = doc(db, 'app_spaces', DEFAULT_SPACE_ID);
+
   return onSnapshot(
-    doc(db, 'app_spaces', DEFAULT_SPACE_ID),
+    docRef,
     (snapshot) => {
       if (snapshot.exists()) {
-        onData(snapshot.data() as AppSpaceData);
+        const data = snapshot.data() as AppSpaceData;
+        onData(data);
+      } else {
+        // Document does not exist in cloud yet: trigger initial upload
+        onEmpty();
       }
     },
     (error) => {
+      console.warn('Firestore onSnapshot error:', error);
       if (onError) onError(error);
-      handleFirestoreError(error, OperationType.GET, path);
+      try {
+        handleFirestoreError(error, OperationType.GET, path);
+      } catch {
+        // logged
+      }
     }
   );
 }
